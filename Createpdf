@@ -1,0 +1,62 @@
+using QuestPDF.Fluent;
+using QuestPDF.Helpers;
+using QuestPDF.Infrastructure;
+using System;
+using System.IO;
+using System.Windows.Forms;
+
+private void button1_Click(object sender, EventArgs e)
+{
+    try
+    {
+        // 1. 宣告社群免費授權 (必須寫，否則執行會報錯)
+        QuestPDF.Settings.License = LicenseType.Community;
+
+        // 2. 定義 PDF 儲存路徑 (預設存到桌面)
+        string desktopPath = Environment.GetFolderPath(Environment.SpecialFolder.Desktop);
+        string filePath = Path.Combine(desktopPath, "WinForms_Form_Output.pdf");
+
+        // 3. 建立 PDF 內容
+        Document.Create(container =>
+        {
+            container.Page(page =>
+            {
+                page.Size(PageSizes.A4);
+                page.Margin(2, Unit.Centimetre);
+                
+                // 【超重要】一定要設定中文字型（如新細明體或微軟正黑體），否則中文會變成空白或框框
+                page.DefaultTextStyle(x => x.FontSize(12).FontFamily("Microsoft YaHei"));
+
+                // 頁首
+                page.Header().Text("客戶資料表單").Bold().FontSize(22).FontColor(Colors.Blue.Darken3);
+
+                // 頁身 (用表格呈現)
+                page.Content().PaddingVertical(1, Unit.Centimetre).Table(table =>
+                {
+                    table.ColumnsDefinition(columns =>
+                    {
+                        columns.RelativeColumn(1); // 標題欄寬度比例
+                        columns.RelativeColumn(3); // 內容欄寬度比例
+                    });
+
+                    // 第一列：客戶名稱 (假設你表單上有個 txtName)
+                    table.Cell().Background(Colors.Grey.Lighten3).Padding(8).Text("客戶名稱").Bold();
+                    table.Cell().Padding(8).Text(txtName.Text); 
+
+                    // 第二列：聯絡電話 (假設你表單上有個 txtPhone)
+                    table.Cell().Background(Colors.Grey.Lighten3).Padding(8).Text("聯絡電話").Bold();
+                    table.Cell().Padding(8).Text(txtPhone.Text);
+                });
+
+                // 頁尾
+                page.Footer().AlignCenter().Text(x => x.CurrentPageNumber());
+            });
+        }).GeneratePdf(filePath); // 生成並儲存
+
+        MessageBox.Show($"PDF 表單已成功輸出至桌面！\n路徑：{filePath}", "成功", MessageBoxButtons.OK, MessageBoxIcon.Information);
+    }
+    catch (Exception ex)
+    {
+        MessageBox.Show($"輸出失敗：{ex.Message}", "錯誤", MessageBoxButtons.OK, MessageBoxIcon.Error);
+    }
+}
