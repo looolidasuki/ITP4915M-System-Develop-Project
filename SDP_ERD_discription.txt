@@ -1,0 +1,359 @@
+Based on the provided Entity-Relationship Diagram (ERD), this is a comprehensive, structured breakdown of the system.
+
+The system appears to be an **Enterprise Resource Planning (ERP) or Supply Chain Management (SCM) system** managing Sales, Inventory, Production, Purchasing, and Supplier Relations.
+
+Because the data types in the image are generic placeholders (e.g., `integer(10)` or `varchar(255)` for everything), I have provided **realistic, industry-standard data types** (like `VARCHAR`, `DECIMAL`, `DATETIME`) to make this schema production-ready.
+
+---
+
+## 1. System Modules (Packages) & Tables
+
+The ERD is organized into logical packages. Here is the full breakdown of every table, its attributes, and recommended data types.
+
+### Module 1: Core System & Staff
+
+This module manages system-wide configuration and user authentication.
+
+#### **Table: Staff** (Tracks company employees)
+
+* `staffID` (INT, Primary Key)
+* `password` (VARCHAR(255))
+* `firstName` (VARCHAR(50))
+* `lastName` (VARCHAR(50))
+* `department` (VARCHAR(50))
+* `phone` (VARCHAR(20))
+* `email` (VARCHAR(100))
+* `status` (VARCHAR(20)) — *Active, Inactive, etc.*
+
+#### **Table: Currency** (Handles multi-currency transactions)
+
+* `currencyID` (INT, Primary Key)
+* `currencyCode` (CHAR(3)) — *e.g., USD, EUR*
+* `currencySymbol` (VARCHAR(5)) — *e.g., $, €*
+* `rateToBase` (DECIMAL(10,4)) — *Exchange rate calculation*
+
+---
+
+### Module 2: Package (B2B Customer Management)
+
+Manages corporate clients and their delivery locations.
+
+#### **Table: B2BCustomer**
+
+* `customerID` (INT, Primary Key)
+* `customerName` (VARCHAR(100))
+* `billingAddress` (VARCHAR(255))
+* `paymentTerm` (VARCHAR(50))
+* `createDate` (DATETIME)
+* `lastModifyDate` (DATETIME)
+
+#### **Table: B2BContactPerson**
+
+* `contactPersonID` (INT, Primary Key)
+* `customerID` (INT, Foreign Key referencing `B2BCustomer`)
+* `contactPerson` (VARCHAR(100)) — *Name of the contact*
+* `title` (VARCHAR(50)) — *e.g., Purchasing Manager*
+* `phone` (VARCHAR(20))
+* `email` (VARCHAR(100))
+
+#### **Table: B2BCustomerDeliveryAddress**
+
+* `addressID` (INT, Primary Key)
+* `customerID` (INT, Foreign Key referencing `B2BCustomer`)
+* `addressID` (VARCHAR(255)) — *The physical shipping address*
+* `deliveryAddress` (VARCHAR(255))
+* `contactPerson` (VARCHAR(100))
+* `phone` (VARCHAR(20))
+* `email` (VARCHAR(100))
+
+---
+
+### Module 3: Package 2 & 3 (Sales CRM & Order Processing)
+
+Handles quotes, sales orders, invoicing, and logistics.
+
+#### **Table: Quotation**
+
+* `quotationID` (INT, Primary Key)
+* `quotationCode` (VARCHAR(50))
+* `staffID` (INT, Foreign Key referencing `Staff`)
+* `customerID` (INT, Foreign Key referencing `B2BCustomer`)
+* `createDate` (DATETIME)
+* `lastModifyDate` (DATETIME)
+* `status` (VARCHAR(20))
+* `currencyID` (INT, Foreign Key referencing `Currency`)
+* `remark` (TEXT)
+
+#### **Table: QuotationProductLine** (Junction table for Quotation & Products)
+
+* `quotationID` (INT, Composite PK, FK)
+* `productID` (INT, Composite PK, FK)
+* `price` (DECIMAL(10,2))
+* `quantity` (INT)
+* `discount` (DECIMAL(5,2))
+
+#### **Table: SalesOrder**
+
+* `salesOrderID` (INT, Primary Key)
+* `salesOrderCode` (VARCHAR(50))
+* `customerID` (INT, Foreign Key referencing `B2BCustomer`)
+* `customOrderID` (VARCHAR(50)) — *Client's internal PO number*
+* `staffID` (INT, Foreign Key referencing `Staff`)
+* `currencyID` (INT, Foreign Key referencing `Currency`)
+* `createDate` (DATETIME)
+* `deliveryDate` (DATETIME)
+* `lastModifyDate` (DATETIME)
+* `salesOrderType` (VARCHAR(20))
+* `discount` (DECIMAL(10,2))
+* `status` (VARCHAR(20))
+* `remark` (TEXT)
+
+#### **Table: SalesOrderProductLine**
+
+* `salesOrderID` (INT, Composite PK, FK)
+* `productID` (INT, Composite PK, FK)
+* `price` (DECIMAL(10,2))
+* `quantity` (INT)
+* `discount` (DECIMAL(5,2))
+* `warehouseReservedQty` (INT) — *(See system notes below)*
+* `shippedQuantity` (INT)
+
+#### **Table: Invoice**
+
+* `invoiceID` (INT, Primary Key)
+* `invoiceCode` (VARCHAR(50))
+* `salesOrderID` (INT, Foreign Key referencing `SalesOrder`)
+* `invoiceType` (VARCHAR(20))
+* `staffID` (INT, Foreign Key referencing `Staff`)
+* `createDate` (DATETIME)
+* `lastModifyDate` (DATETIME)
+* `remark` (TEXT)
+* `status` (VARCHAR(20))
+
+#### **Table: InvoiceLine**
+
+* `invoiceID` (INT, Composite PK, FK)
+* `deliveryNoteID` (INT, Composite PK, FK)
+* `invoiceQuantity` (INT)
+* `amount` (DECIMAL(10,2))
+
+#### **Table: DeliveryNote** (Shipping records)
+
+* `deliveryNoteID` (INT, Primary Key)
+* `deliveryNoteCode` (VARCHAR(50))
+* `staffID` (INT, Foreign Key referencing `Staff`)
+* `createDate` (DATETIME)
+* `customerID` (INT, Foreign Key referencing `B2BCustomer`)
+* `relatedSalesOrderID` (INT, Foreign Key referencing `SalesOrder`)
+* `sourceWarehouseID` (INT, Foreign Key)
+* `trackingNumber` (VARCHAR(100))
+* `remark` (TEXT)
+* `status` (VARCHAR(20))
+
+#### **Table: DeliveryLine**
+
+* `deliveryNoteID` (INT, Composite PK, FK)
+* `productID` (INT, Composite PK, FK)
+* `shipQuantity` (INT)
+
+---
+
+### Module 4: Product & Core Inventory
+
+Manages finished goods, raw materials, and physical warehouse stocks.
+
+#### **Table: Product**
+
+* `productID` (INT, Primary Key)
+* `productCode` (VARCHAR(50))
+* `categoryCode` (VARCHAR(20))
+* `styleNumber` (VARCHAR(50))
+* `size` (VARCHAR(10))
+* `color` (VARCHAR(20))
+* `basePrice` (DECIMAL(10,2))
+* `salesPriceCurrencyID` (INT, Foreign Key)
+* `unit` (VARCHAR(10)) — *e.g., pcs, box*
+
+#### **Table: ProductWarehouse** (Stock levels of completed products)
+
+* `warehouseID` (INT, Composite PK, FK)
+* `productID` (INT, Composite PK, FK)
+* `physicalQuantity` (INT)
+* `reservedQuantity` (INT)
+
+#### **Table: RawMaterial**
+
+* `rawMaterialID` (INT, Primary Key)
+* `rawMaterialCode` (VARCHAR(50))
+* `category` (VARCHAR(50))
+* `size` (VARCHAR(10))
+* `color` (VARCHAR(20))
+* `stock` (INT)
+
+#### **Table: ProductRawMaterial** (Bill of Materials / Recipe)
+
+* `productID` (INT, Composite PK, FK)
+* `rawMaterialID` (INT, Composite PK, FK)
+* `rawMaterialNeedQty` (INT) — *How much raw material makes 1 product*
+* `staffID` (INT, Foreign Key)
+* `createDate` (DATETIME)
+* `lastModifyDate` (DATETIME)
+
+#### **Table: RawMaterialWarehouse**
+
+* `rawMaterialID` (INT, Composite PK, FK)
+* `warehouseID` (INT, Composite PK, FK)
+* `physicalQuantity` (INT)
+* `reservedQuantity` (INT)
+* `purchasedQuantity` (INT)
+
+#### **Table: Warehouse**
+
+* `warehouseID` (INT, Primary Key)
+* `warehouseCode` (VARCHAR(50))
+
+---
+
+### Module 5: Package 4 (Manufacturing & Production)
+
+Handles factory orders when stock isn't available to fulfill sales.
+
+#### **Table: ProductionOrder**
+
+* `productionOrderID` (INT, Primary Key)
+* `productionOrderCode` (VARCHAR(50))
+* `relatedSalesOrderID` (INT, Foreign Key referencing `SalesOrder`)
+* `staffID` (INT, Foreign Key)
+* `createDate` (DATETIME)
+* `lastModifyDate` (DATETIME)
+* `estimatedFinishDate` (DATETIME)
+* `status` (VARCHAR(20))
+* `remark` (TEXT)
+
+#### **Table: ProductionOrderProductLine**
+
+* `productionOrderID` (INT, Composite PK, FK)
+* `productID` (INT, Composite PK, FK)
+* `productionQty` (INT)
+
+#### **Table: RawMaterialRequestNote** (Factory floor requests items from warehouse)
+
+* `rawMaterialRequestNoteID` (INT, Primary Key)
+* `relatedProductionOrder` (INT, Foreign Key)
+* `staffID` (INT, Foreign Key)
+* `createDate` (DATETIME)
+* `requestDate` (DATETIME)
+* `remark` (TEXT)
+
+#### **Table: RawMaterialRequestNoteLine**
+
+* `rawMaterialRequestNoteID` (INT, Composite PK, FK)
+* `rawMaterialID` (INT, Composite PK, FK)
+* `rawMaterialReqQuantity` (INT)
+
+---
+
+### Module 6: Package 5 & 6 (Procurement & Supplier Management)
+
+Manages purchasing raw materials from external suppliers.
+
+#### **Table: Supplier**
+
+* `supplierID` (INT, Primary Key)
+* `supplierName` (VARCHAR(100))
+* `billingAddress` (VARCHAR(255))
+* `contactPerson` (VARCHAR(100))
+* `phone` (VARCHAR(20))
+* `email` (VARCHAR(100))
+* `paymentTerm` (VARCHAR(50))
+* `bankAccount` (VARCHAR(50))
+* `status` (VARCHAR(20))
+
+#### **Table: RawMaterialSupplier** (Catalog linking materials to suppliers)
+
+* `rawMaterialID` (INT, Composite PK, FK)
+* `supplierID` (INT, Composite PK, FK)
+* `supplierStyleNumber` (VARCHAR(50))
+* `price` (DECIMAL(10,2))
+* `unit` (VARCHAR(10))
+* `minimumOrderQuantity` (INT)
+* `quoteDate` (DATETIME)
+* `lastModify` (DATETIME)
+* `status` (VARCHAR(20))
+
+#### **Table: PurchaseOrder**
+
+* `purchaseOrderID` (INT, Primary Key)
+* `purchaseOrderCode` (VARCHAR(50))
+* `supplierID` (INT, Foreign Key referencing `Supplier`)
+* `staffID` (INT, Foreign Key)
+* `relatedShortageReport` (INT, Foreign Key)
+* `createDate` (DATETIME)
+* `lastModifyDate` (DATETIME)
+* `requestDeliveryDate` (DATETIME)
+* `status` (VARCHAR(20))
+* `remark` (TEXT)
+
+#### **Table: PurchaseOrderRawMaterialLine**
+
+* `purchaseOrderID` (INT, Composite PK, FK)
+* `rawMaterialID` (INT, Composite PK, FK)
+* `price` (DECIMAL(10,2))
+* `orderQuantity` (INT)
+* `receivedQuantity` (INT)
+
+#### **Table: GoodsReceivedNote** (Inbound warehouse receipt)
+
+* `goodsReceivedNoteID` (INT, Primary Key)
+* `goodsReceivedNoteCode` (VARCHAR(50))
+* `supplierID` (INT, Foreign Key)
+* `relatedPurchaseOrderID` (INT, Foreign Key)
+* `createDate` (DATETIME)
+* `lastModifyDate` (DATETIME)
+* `status` (VARCHAR(20))
+* `remark` (TEXT)
+
+#### **Table: GoodsReceivedNoteRawMaterialLine**
+
+* `goodsReceivedNoteID` (INT, Composite PK, FK)
+* `rawMaterialID` (INT, Composite PK, FK)
+* `receivedQuantity` (INT)
+
+---
+
+## 2. Relationships Summary
+
+The diagram relies heavily on **One-to-Many ($1:\dots$ or $1:N$)** and **Many-to-Many ($M:N$)** relationships:
+
+* **B2BCustomer to Contacts/Addresses:** One customer can have multiple contact persons and multiple delivery locations ($1:N$).
+* **Sales Processing:** A `SalesOrder` can have multiple `Product` lines ($M:N$, broken down via `SalesOrderProductLine`).
+* **Fulfillment & Invoicing:** A `SalesOrder` generates a `DeliveryNote` for shipping. The `InvoiceLine` links back to the `DeliveryNote`, meaning invoices are generated based on actual physical shipments.
+* **Production & Materials:** A `Product` is built from multiple `RawMaterials` ($M:N$ via `ProductRawMaterial`). If an order cannot be fulfilled by current warehouse inventory, a `ProductionOrder` is triggered.
+* **Procurement:** A `PurchaseOrder` buys `RawMaterials` from a `Supplier`. Once delivered, it maps directly to a `GoodsReceivedNote` to update physical stock.
+
+---
+
+## 3. Important Notes Extracted from Diagram Text
+
+The ERD includes embedded business logic notes crucial to how developers should code the system:
+
+1. **Warehouse Reservation Logic (Sales Order Line):** > `"warehouseReservedQty": If user inputs a value to hold qty from warehouse, then will know how many shortage.`
+* *Meaning:* This field acts as an inventory lock. If you reserve stock for a high-priority customer order, the system subtracts this from available stock to calculate if a manufacturing shortage exists.
+
+
+2. **Shipping & Delivery Updates:**
+> `"shippedQuantity", default "0" -> DeliveryNote get salesOrder Products, user input shipped qty in DN, then update shippedQuantity, when all salesOrderProductLine.quantity = shippedQuantity, salesOrder.status = finished.`
+
+
+* *Meaning:* A workflow trigger. When goods are shipped via a Delivery Note, the `shippedQuantity` updates on the Sales Order line. The moment your total shipped items match the original ordered quantity, the system automatically flips the overall `SalesOrder` status to **"Finished"**.
+
+
+3. **Production Calculation:**
+> `productionQty = this.salesOrderProductLine.quantity - this.warehouseReservedQty`
+
+
+* *Meaning:* Formula for factory output requirements. If a customer orders 100 units, and you only have 40 units locked in the warehouse (`warehouseReservedQty`), the `ProductionOrder` must dynamically create a run for exactly 60 units.
+
+
+4. **Shortage Report:**
+* The `ShortageReport` is a Database View (`<<View>>`). It is not a permanent table but a dynamic query that cross-references required raw materials versus what's currently in the `RawMaterialWarehouse` to flag what the purchasing agent needs to order.
